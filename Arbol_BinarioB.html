@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Proyecto Árbol Binario</title>
+<style>
+body{
+    font-family:Arial,sans-serif;
+    text-align:center;
+    margin:20px;
+    background:linear-gradient(135deg,#eaf2f8,#d6eaf8);
+    color:#1f2d3d
+}
+.caja{
+    background:#ffffffee;
+    padding:20px;
+    max-width:800px;
+    margin:auto;
+    border-radius:12px;
+    box-shadow:0 12px 35px rgba(31,78,121,.18)
+}
+.topbar{
+    position:relative;
+    margin-bottom:10px
+}
+.topbar h2{
+    margin:0;
+    color:#1b4f72
+}
+.topbar p{
+    margin:8px 0 0;
+    color:#566573
+}
+input,button{
+    padding:8px;
+    font-size:16px;
+    border-radius:8px;
+    border:1px solid #bfc9ca
+}
+button{
+    cursor:pointer
+}
+#limpiar{
+    position:absolute;
+    right:0;
+    top:0;
+    background:#d35454;
+    color:white;
+    border:0
+}
+#construir{
+    background:#2e86c1;
+    color:white;
+    border:0
+}
+#btnRecorrido{
+    background:#117a65;
+    color:white;
+    border:0
+}
+#error{
+    color:#c0392b;
+    margin:10px;
+    min-height:20px
+}
+#resultado{
+    color:#117a65;
+    font-size:18px;
+    font-weight:bold;
+    margin:15px
+}
+canvas{
+    background:#f8fbfd;
+    border:1px solid #cfd8dc;
+    margin-top:10px;
+    border-radius:10px
+}
+</style>
+</head>
+
+<body>
+<div class="caja">
+
+    <div class="topbar">
+        <button id="limpiar" onclick="limpiar()">Limpiar</button>
+        <h2>Árbol Binario de Búsqueda</h2>
+        <p>Ingresa números enteros separados por comas</p>
+    </div>
+
+    <input id="datos" type="text"
+    placeholder="Ejemplo: 50, 30, 70, 20"
+    oninput="validar()">
+
+    <button id="construir" onclick="ejecutar()">Construir Árbol</button>
+
+    <div id="error"></div>
+
+    <canvas id="miCanvas" width="750" height="400"></canvas>
+
+    <br><br>
+
+    <button id="btnRecorrido" onclick="animarInorden()" disabled>
+        Ejecutar recorrido Inorden
+    </button>
+
+    <div id="resultado"></div>
+
+</div>
+
+<script>
+class Nodo{
+    constructor(valor){
+        this.valor=valor;
+        this.izquierdo=null;
+        this.derecho=null;
+    }
+}
+
+class ArbolBinario{
+    constructor(){
+        this.raiz=null;
+    }
+
+    insertar(valor){
+        let nuevo=new Nodo(valor);
+        if(this.raiz===null){
+            this.raiz=nuevo;
+            return nuevo;
+        }
+        return this.insertarNodo(this.raiz,nuevo);
+    }
+
+    insertarNodo(actual,nuevo){
+        if(nuevo.valor<actual.valor){
+            if(actual.izquierdo===null){
+                actual.izquierdo=nuevo;
+                return nuevo;
+            }
+            return this.insertarNodo(actual.izquierdo,nuevo);
+        }
+
+        if(nuevo.valor>actual.valor){
+            if(actual.derecho===null){
+                actual.derecho=nuevo;
+                return nuevo;
+            }
+            return this.insertarNodo(actual.derecho,nuevo);
+        }
+
+        return actual; // repetido
+    }
+
+    recorridoInorden(nodo=this.raiz,arreglo=[]){
+        if(nodo!==null){
+            this.recorridoInorden(nodo.izquierdo,arreglo);
+            arreglo.push(nodo);
+            this.recorridoInorden(nodo.derecho,arreglo);
+        }
+        return arreglo;
+    }
+}
+
+let arbol=null;
+let numeros=[];
+let modoActivo="insercion"; // insercion o recorrido
+
+function validar(){
+    let texto=document.getElementById("datos").value;
+    let error=document.getElementById("error");
+
+    if(/[^0-9,\-\s]/.test(texto))
+        error.innerText="Solo se permiten números enteros.";
+    else
+        error.innerText="";
+}
+
+function dibujar(nodo,x,y,espacio,ctx,activo=null){
+    if(nodo===null)return;
+
+    ctx.strokeStyle="#7f8c8d";
+    ctx.lineWidth=1.5;
+
+    if(nodo.izquierdo){
+        ctx.beginPath();
+        ctx.moveTo(x,y);
+        ctx.lineTo(x-espacio,y+60);
+        ctx.stroke();
+        dibujar(nodo.izquierdo,x-espacio,y+60,espacio/2,ctx,activo);
+    }
+
+    if(nodo.derecho){
+        ctx.beginPath();
+        ctx.moveTo(x,y);
+        ctx.lineTo(x+espacio,y+60);
+        ctx.stroke();
+        dibujar(nodo.derecho,x+espacio,y+60,espacio/2,ctx,activo);
+    }
+
+    ctx.beginPath();
+    ctx.arc(x,y,18,0,2*Math.PI);
+
+    if(nodo===activo){
+        ctx.fillStyle = modoActivo==="insercion" ? "#5dade2" : "#48c9b0";
+    }else{
+        ctx.fillStyle = "#2874a6";
+    }
+
+    ctx.fill();
+    ctx.strokeStyle="#1f618d";
+    ctx.stroke();
+
+    ctx.fillStyle="white";
+    ctx.font="14px Arial";
+    ctx.textAlign="center";
+    ctx.textBaseline="middle";
+    ctx.fillText(nodo.valor,x,y);
+}
+
+function mostrarArbol(activo=null){
+    let canvas=document.getElementById("miCanvas");
+    let ctx=canvas.getContext("2d");
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+
+    if(arbol && arbol.raiz)
+        dibujar(arbol.raiz,canvas.width/2,40,canvas.width/4,ctx,activo);
+}
+
+function ejecutar(){
+    let texto=document.getElementById("datos").value;
+    let error=document.getElementById("error");
+    let resultado=document.getElementById("resultado");
+
+    error.innerText="";
+    resultado.innerText="";
+    let datos=texto.split(",");
+    numeros=[];
+
+    for(let dato of datos){
+        dato=dato.trim();
+
+        if(!/^-?\d+$/.test(dato)){
+            alert("Solo puedes ingresar números enteros separados por comas.");
+            error.innerText="Dato inválido. Usa solo números enteros.";
+            return;
+        }
+
+        numeros.push(Number(dato));
+    }
+
+    if(numeros.length<2){
+        alert("Debes ingresar al menos 2 números enteros.");
+        error.innerText="Ingresa al menos 2 números.";
+        return;
+    }
+
+    arbol=new ArbolBinario();
+    document.getElementById("btnRecorrido").disabled=true;
+    modoActivo="insercion";
+
+    let i=0;
+
+    function insertar(){
+        if(i<numeros.length){
+            let nodo=arbol.insertar(numeros[i]);
+            mostrarArbol(nodo);
+            i++;
+            setTimeout(insertar,600);
+        }else{
+            mostrarArbol();
+            document.getElementById("btnRecorrido").disabled=false;
+        }
+    }
+
+    insertar();
+}
+
+function animarInorden(){
+    if(!arbol)return;
+
+    let nodos=arbol.recorridoInorden();
+    let resultado=document.getElementById("resultado");
+    resultado.innerText="";
+    let valores=[];
+    let i=0;
+    modoActivo="recorrido";
+
+    function visitar(){
+        if(i<nodos.length){
+            mostrarArbol(nodos[i]);
+            valores.push(nodos[i].valor);
+            resultado.innerText="Resultado Inorden: "+valores.join(" → ");
+            i++;
+            setTimeout(visitar,700);
+        }else{
+            mostrarArbol();
+        }
+    }
+
+    visitar();
+}
+
+function limpiar(){
+    document.getElementById("datos").value="";
+    document.getElementById("error").innerText="";
+    document.getElementById("resultado").innerText="";
+    document.getElementById("btnRecorrido").disabled=true;
+
+    let canvas=document.getElementById("miCanvas");
+    canvas.getContext("2d").clearRect(0,0,canvas.width,canvas.height);
+
+    arbol=null;
+    numeros=[];
+}
+</script>
+</body>
+</html>
